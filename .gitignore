@@ -1,0 +1,12 @@
+/.idea
+/node_modules
+package-lock.json
+
+*.csv
+/compiled_output
+
+/compiled_js
+/copied_ts
+
+compiled_js/
+copied_ts/

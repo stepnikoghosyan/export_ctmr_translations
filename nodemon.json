@@ -1,0 +1,8 @@
+{
+    "verbose": true,
+    "ignore": ["*.test.js", "*.ctmr.ts"],
+    "watch": ["src", "NEW"],
+    "exec": "ts-node ./NEW/index.ts",
+    "ext": "ts, json"
+  }
+  
