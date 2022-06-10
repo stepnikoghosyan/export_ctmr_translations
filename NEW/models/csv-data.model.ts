@@ -5,5 +5,4 @@ export interface ICsvData {
   key: string;
   [Languages.EN]: string;
   [Languages.FR]: string;
-  configType: 'static' | 'dynamic';
 }

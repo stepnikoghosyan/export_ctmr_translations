@@ -11,7 +11,7 @@ ${getStringifiedTranslationsForLanguage(translations[Languages.FR])}
   };\n`;
 }
 
-function getStringifiedTranslationsForLanguage(translations: {[key: string]: any}, depth = 4): string {
+export function getStringifiedTranslationsForLanguage(translations: {[key: string]: any}, depth = 4): string {
   let str = '';
 
   let spacesCount: number;

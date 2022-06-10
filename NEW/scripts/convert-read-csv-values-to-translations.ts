@@ -2,45 +2,54 @@ import { ICsvData } from '../models/csv-data.model';
 import { IImportedCsvData } from '../models/imported-csv-data.model';
 import { Languages } from '../models/languages.model';
 
-export function convertCsvToTranslations(data: ICsvData[]): { imported: IImportedCsvData[], unresolved: ICsvData[], dynamicTranslations: IImportedCsvData[] } {
-  const result: { [filePath: string]: { [key in Languages]: any } } = {};
-  const unresolvedTranslations: ICsvData[] = [];
-  const dynamicTranslations: { [filePath: string]: { [key in Languages]: any } } = {};
+export function convertCsvRowsToTranslationObjects(data: ICsvData[], dataGlobal: ICsvData[]): { imported: IImportedCsvData[], importedGlobal: IImportedCsvData, possibleDuplications: ICsvData[] } {
+  const grouped = groupCsvRowsByFilePath(data, dataGlobal);
 
-  data.map((item) => {
+  const result: IImportedCsvData[] = convertGroupedCsvRowToObject(grouped.imported);
+
+  return {
+    imported: result,
+    importedGlobal: grouped.importedGlobal,
+    possibleDuplications: grouped.possibleDuplications,
+  };
+}
+
+function groupCsvRowsByFilePath(data: ICsvData[], dataGlobal: ICsvData[]): { imported: IImportedCsvData[], importedGlobal: IImportedCsvData, possibleDuplications: ICsvData[] } {
+  const result: { [filePath: string]: { [key in Languages]: any } } = {};
+  const possibleDuplications: ICsvData[] = [];
+
+  data.forEach((item) => {
     if (!!result[item.filePath]) {
+      // Add to existing translations
       if (!!result[item.filePath][Languages.EN][item.key] || !!result[item.filePath][Languages.FR][item.key]) {
         // Might be duplicate
-        unresolvedTranslations.push(item);
-      } else if (item.configType === 'static') {
+        possibleDuplications.push(item);
+      } else {
         // Import
         result[item.filePath][Languages.EN][item.key] = item[Languages.EN];
         result[item.filePath][Languages.FR][item.key] = item[Languages.FR];
-      } else {
-        dynamicTranslations[item.filePath][Languages.EN][item.key] = item[Languages.EN];
-        dynamicTranslations[item.filePath][Languages.FR][item.key] = item[Languages.FR];
       }
     } else {
-      if (item.configType === 'static') {
-        result[item.filePath] = {
-          [Languages.EN]: {
-            [item.key]: item[Languages.EN]
-          },
-          [Languages.FR]: {
-            [item.key]: item[Languages.FR]
-          }
-        };
-      } else {
-        dynamicTranslations[item.filePath] = {
-          [Languages.EN]: {
-            [item.key]: item[Languages.EN]
-          },
-          [Languages.FR]: {
-            [item.key]: item[Languages.FR]
-          }
-        };
-      }
+      // Create new translations
+      result[item.filePath] = {
+        [Languages.EN]: {
+          [item.key]: item[Languages.EN],
+        },
+        [Languages.FR]: {
+          [item.key]: item[Languages.FR],
+        },
+      };
     }
+  });
+
+  const globalResult: { [key in Languages]: any } = {
+    [Languages.EN]: {},
+    [Languages.FR]: {},
+  };
+
+  dataGlobal.forEach((item) => {
+    globalResult[Languages.EN][item.key] = item[Languages.EN];
+    globalResult[Languages.FR][item.key] = item[Languages.FR];
   });
 
   return {
@@ -48,10 +57,55 @@ export function convertCsvToTranslations(data: ICsvData[]): { imported: IImporte
       filePath: key,
       translations: result[key],
     })),
-    dynamicTranslations: Object.keys(dynamicTranslations).map(key => ({
-      filePath: key,
-      translations: result[key],
-    })),
-    unresolved: unresolvedTranslations
+    importedGlobal: {
+      filePath: dataGlobal[0].filePath,
+      translations: globalResult,
+    },
+    possibleDuplications: possibleDuplications,
   };
+}
+
+function convertGroupedCsvRowToObject(data: IImportedCsvData[]): IImportedCsvData[] {
+  return data.map((item) => {
+    return {
+      filePath: item.filePath,
+      translations: {
+        [Languages.EN]: buildObject(item.translations[Languages.EN]),
+        [Languages.FR]: buildObject(item.translations[Languages.FR]),
+      },
+    };
+  });
+}
+
+function convertKeyToObject(key: string, value: string, parent?: any): any {
+  const paths = key.split('.');
+  if (paths.length === 1) {
+    return {
+      ...parent,
+      [key]: value,
+    };
+  }
+
+  const currentKey = paths[0];
+
+  return {
+    ...parent,
+    [currentKey]: {
+      ...(parent && currentKey in parent ? { ...parent[currentKey] } : undefined),
+      ...convertKeyToObject(paths.slice(1).join('.'), value, (parent && currentKey in parent ? parent[currentKey] : undefined)),
+    },
+  };
+}
+
+function buildObject(obj: any) {
+  let result = {};
+
+  Object.keys(obj).forEach((key) => {
+    result = {
+      ...result,
+      ...convertKeyToObject(key, obj[key], result),
+    };
+  });
+
+  return result;
 }

@@ -9,18 +9,12 @@ if (!process.argv.slice(2)[0]) {
 }
 
 async function execute(): Promise<void> {
-  const csvFilePath = './NEW/files/example_ctmr_translations.csv';
+  const csvFilePath = './NEW/files/CTMR_translations.csv';
 
   const translations = await readTranslationsFromCsvFile(csvFilePath);
 
-  const dynamicConfigFilePaths = [
-    ...translations.importedDynamic.map(item => item.filePath),
-    ...translations.unresolvedCsvRows.filter(item => item.configType === 'dynamic').map(item => item.filePath),
-    ...translations.unknownImports.filter(item => item.configType === 'dynamic').map(item => item.filePath),
-  ];
-
   for (const item of translations.imported) {
-    const updated = updateTranslationFilesInProject(item.filePath, dynamicConfigFilePaths, item.translations);
+    const updated = updateTranslationFilesInProject(item.filePath, item.translations);
     if (!!updated) {
       await formatTsFiles([item.filePath]);
     }
@@ -38,4 +32,4 @@ function isKeyFromEnum(): void {
 
 }
 
-// execute();
+execute();

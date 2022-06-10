@@ -8,6 +8,7 @@ export function formatTsFiles(filePaths: string[]): Promise<void> {
         return resolve();
       }
 
+      // TODO: formatting global files isn't working
       filePaths.map(filePath => {
         npm.commands.run(['format-ts', filePath], (runErr) => {
           if (!!runErr) {

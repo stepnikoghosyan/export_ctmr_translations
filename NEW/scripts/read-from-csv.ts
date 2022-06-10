@@ -2,56 +2,79 @@ import { IImportedCsvData } from '../models/imported-csv-data.model';
 import { Languages } from '../models/languages.model';
 import { ICsvData } from '../models/csv-data.model';
 import { createReadStream } from 'fs';
-import { convertCsvToTranslations } from './convert-read-csv-values-to-translations';
+import { convertCsvRowsToTranslationObjects } from './convert-read-csv-values-to-translations';
+
 const csvParser = require('csv-parser');
 
-export function isTitle(item: ICsvData): boolean {
-  return !!item.filePath && !item.key && !item[Languages.EN] && !item[Languages.FR];
-}
-
-export function validateValues(item: ICsvData): boolean {
+function isValidRow(item: ICsvData): boolean {
   return !!item.filePath && !!item.key && !!item[Languages.EN] && !!item[Languages.FR];
 }
 
-export function isGlobal(item: ICsvData): boolean {
-  return !!item.filePath && !!item.key && !!item[Languages.EN] && !!item[Languages.FR] && item.filePath === 'global';
+function isUnresolvedRow(item: ICsvData): boolean {
+  // Do NOT include Titles and Empty lines as unresolved rows
+
+  // Title
+  if (!!item.filePath && !item.key && !item[Languages.EN] && !item[Languages.FR]) {
+    return false;
+  }
+
+  // Empty (blank) line
+  if (!item.filePath && !item.key && !item[Languages.EN] && !item[Languages.FR]) {
+    return false;
+  }
+
+  return true;
 }
 
-// Reads values from CSV file, saves to:
-// 1. csvRows (resolved rows from CSV)
-// 2. unresolvedCsvRows (maybe invalid rows in CSV)
+function isGlobal(item: ICsvData): boolean {
+  return item.filePath.toLowerCase() === 'global';
+}
+
+// Read values from CSV file, saves to:
+// 1. csvRows (resolved rows from CSV ready for import)
+// 2. unresolvedCsvRows (invalid rows in CSV, which cannot be converted to objects ready for import)
 // Then passes resolved data to convertCsvToTranslations(csvRows) to convert them to translations config objects
-export function readTranslationsFromCsvFile(path: string): Promise<{ imported: IImportedCsvData[], importedDynamic: IImportedCsvData[], unresolvedCsvRows: ICsvData[], unknownImports: ICsvData[] }> {
+export function readTranslationsFromCsvFile(path: string): Promise<{ imported: IImportedCsvData[], unresolvedCsvRows: ICsvData[], possibleDuplications: ICsvData[] }> {
   const csvRows: ICsvData[] = [];
+  const globalRows: ICsvData[] = [];
   const unresolvedCsvRows: ICsvData[] = [];
 
   return new Promise((resolve) => {
     createReadStream(path)
       .pipe(csvParser())
       .on('data', (row: ICsvData) => {
-        // console.log('data:', row);
-        if (!isTitle(row) && !isGlobal(row) && validateValues(row)) {
+        if (!isValidRow(row)) {
+          if (isUnresolvedRow(row)) {
+            unresolvedCsvRows.push(row);
+          }
+
+          return;
+        }
+
+        if (isGlobal(row)) {
+          globalRows.push({
+            filePath: row.filePath,
+            key: row.key,
+            [Languages.EN]: row[Languages.EN],
+            [Languages.FR]: row[Languages.FR],
+          });
+        } else {
+          // Ordinary rows
           csvRows.push({
             filePath: row.filePath,
             key: row.key,
             [Languages.EN]: row[Languages.EN],
             [Languages.FR]: row[Languages.FR],
-            configType: row.configType,
           });
-        } else {
-          if (!isTitle(row)) {
-            unresolvedCsvRows.push(row);
-          }
         }
       })
       .on('end', () => {
-        console.log('onEnd:', csvRows.length, unresolvedCsvRows.length);
-        const importResults = convertCsvToTranslations(csvRows);
+        console.log('onEnd');
+        const importResults = convertCsvRowsToTranslationObjects(csvRows, globalRows);
 
         resolve({
-          imported: importResults.imported,
-          importedDynamic: importResults.dynamicTranslations,
-          unknownImports: importResults.unresolved,
+          imported: [...importResults.imported, importResults.importedGlobal],
+          possibleDuplications: importResults.possibleDuplications,
           unresolvedCsvRows,
         });
       });
