@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { convertTranslationsToFileWriteableString } from './convert-translations-to-string';
 import { getAbsoluteFilePath } from './get-absolute-file-path.helper';
 import { convertTranslationsToFileWriteableStringGlobal } from './convert-translations-to-string-globa';
+import { CONSTANTS } from '../constants';
 
 export function updateTranslationFilesInProject(filePath: string, translations: { [key in Languages]: any }): boolean {
   if (filePath.toLowerCase() === 'global') {
@@ -29,8 +30,8 @@ export function updateTranslationFilesInProject(filePath: string, translations: 
 
 // TODO: refactor to support dynamic languages count and config paths
 function updateGlobalTranslationFiles(translations: { [key in Languages]: any }): void {
-  const enAbsoluteFilePath = getAbsoluteFilePath('src/app/shared/modules/translations/configs/english-translations.config.ts', true);
-  const frAbsoluteFilePath = getAbsoluteFilePath('src/app/shared/modules/translations/configs/french-translations.config.ts', true);
+  const enAbsoluteFilePath = getAbsoluteFilePath(CONSTANTS.GLOBAL_TRANSLATIONS_PATH_EN, true);
+  const frAbsoluteFilePath = getAbsoluteFilePath(CONSTANTS.GLOBAL_TRANSLATIONS_PATH_FR, true);
 
   const enFile = readFileSync(enAbsoluteFilePath, { encoding: 'utf-8' });
   const frFile = readFileSync(frAbsoluteFilePath, { encoding: 'utf-8' });

@@ -13,6 +13,8 @@ async function execute(): Promise<void> {
 
   const translations = await readTranslationsFromCsvFile(csvFilePath);
 
+  console.log('filePaths:', translations.imported.map(item => item.filePath));
+
   for (const item of translations.imported) {
     const updated = updateTranslationFilesInProject(item.filePath, item.translations);
     if (!!updated) {

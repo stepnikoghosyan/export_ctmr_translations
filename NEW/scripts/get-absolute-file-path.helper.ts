@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import { PATH_ALIASES } from './ng-project-path-aliases';
+import { PATH_ALIASES } from '../constants/ng-project-path-aliases';
 
 let ROOT_DIR = process.argv.slice(2)[0];
 

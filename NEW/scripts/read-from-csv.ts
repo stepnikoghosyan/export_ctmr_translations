@@ -3,6 +3,7 @@ import { Languages } from '../models/languages.model';
 import { ICsvData } from '../models/csv-data.model';
 import { createReadStream } from 'fs';
 import { convertCsvRowsToTranslationObjects } from './convert-read-csv-values-to-translations';
+import { getAbsoluteFilePath } from './get-absolute-file-path.helper';
 
 const csvParser = require('csv-parser');
 
@@ -71,6 +72,10 @@ export function readTranslationsFromCsvFile(path: string): Promise<{ imported: I
       .on('end', () => {
         console.log('onEnd');
         const importResults = convertCsvRowsToTranslationObjects(csvRows, globalRows);
+
+        importResults.imported.forEach((item) => {
+          item.filePath = getAbsoluteFilePath(item.filePath);
+        });
 
         resolve({
           imported: [...importResults.imported, importResults.importedGlobal],
