@@ -5,11 +5,9 @@ import { Languages } from '../models/languages.model';
 export function convertCsvRowsToTranslationObjects(data: ICsvData[], dataGlobal: ICsvData[]): { imported: IImportedCsvData[], importedGlobal: IImportedCsvData, possibleDuplications: ICsvData[] } {
   const grouped = groupCsvRowsByFilePath(data, dataGlobal);
 
-  const result: IImportedCsvData[] = convertGroupedCsvRowToObject(grouped.imported);
-
   return {
-    imported: result,
-    importedGlobal: grouped.importedGlobal,
+    imported: convertGroupedCsvRowToObject(grouped.imported),
+    importedGlobal: convertGroupedCsvRowToObject([grouped.importedGlobal])[0],
     possibleDuplications: grouped.possibleDuplications,
   };
 }
